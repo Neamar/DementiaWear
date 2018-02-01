@@ -164,7 +164,7 @@ public class DementiaWatchFace extends CanvasWatchFaceService {
             long now = System.currentTimeMillis();
             mCalendar.setTimeInMillis(now);
 
-            drawer.drawOnCanvas(canvas, mAmbient);
+            drawer.drawOnCanvas(canvas, mCalendar, mAmbient);
         }
 
         @Override
