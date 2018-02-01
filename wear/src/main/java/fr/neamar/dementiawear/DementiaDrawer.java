@@ -66,27 +66,26 @@ public class DementiaDrawer {
         canvas.drawRect(0, 0, width, height, backgroundPaint);
         // Draw the stator and other static elements
         canvas.drawBitmap(this.backgroundImage, centerX - backgroundImage.getWidth() / 2, centerY - backgroundImage.getHeight() / 2, backgroundPaint);
+        canvas.save();
 
-        float statorTheta = (float) (calendar.get(Calendar.SECOND) / 60f * 360);
+        float statorTheta = (calendar.get(Calendar.SECOND) + calendar.get(Calendar.MILLISECOND) / 1000) / 60f * 360;
 
         // Transform the angle to be used with cos and sin. Make sure that 0 is at the top, as is standard in a watch.
         float statorThetaRadians = (float) Math.toRadians(statorTheta - 90);
-        float rotorTheta = statorTheta * DementiaSettings.n;
+        float rotorTheta = statorTheta * DementiaSettings.n + (360 / DementiaSettings.t / 2);
 
         Matrix statorMatrix = new Matrix();
 
         Log.e(TAG, "Angle " + statorTheta + " rad " + Math.toRadians(statorTheta));
         // Start centered
-        float dx = centerX;
-        dx += combinedCircularPitch * Math.cos(statorThetaRadians);
-        dx -= rotorImage.getWidth() / 2;
-
-        float dy = centerY;
-        dy += combinedCircularPitch * Math.sin(statorThetaRadians);
-        dy -= rotorImage.getHeight() / 2;
-
+        float dx = centerX - rotorImage.getWidth() / 2;
+        float dy = centerY - combinedCircularPitch - rotorImage.getHeight() / 2;
         statorMatrix.setTranslate(dx, dy);
-        //statorMatrix.postRotate(rotorTheta, centerX, centerY);
+        statorMatrix.postRotate(rotorTheta, dx + rotorImage.getWidth() / 2, dy + rotorImage.getHeight() / 2);
+
+        canvas.rotate(statorTheta, centerX, centerY);
         canvas.drawBitmap(this.rotorImage, statorMatrix, backgroundPaint);
+
+        canvas.restore();
     }
 }
