@@ -15,6 +15,7 @@ public class DementiaDrawer {
     private final static String TAG = "DementiaDrawer";
 
     private final Bitmap backgroundImage;
+    private final Bitmap ribbonImage;
     private final Bitmap rotorImage;
     private final Bitmap handImage;
 
@@ -46,6 +47,7 @@ public class DementiaDrawer {
         rotorCircularPitch = 2 * DementiaSettings.ROTOR_CIRCULAR_PITCH * scalingRatio;
         combinedCircularPitch = statorCircularPitch + rotorCircularPitch + DementiaSettings.TEETH_SIZE;
 
+        this.ribbonImage = getRibbonImage(context);
         this.rotorImage = getRotorImage(context);
         this.handImage = getHandImage(context);
 
@@ -59,6 +61,11 @@ public class DementiaDrawer {
     private Bitmap getBackgroundImage(Context context, int width, int height) {
         Bitmap originalStator = BitmapFactory.decodeResource(context.getResources(), R.drawable.stator);
         return Bitmap.createScaledBitmap(originalStator, (int) (width * DementiaSettings.STATOR_RATIO_IN_WATCH), (int) (height * DementiaSettings.STATOR_RATIO_IN_WATCH), true);
+    }
+
+    private Bitmap getRibbonImage(Context context) {
+        Bitmap originalRibbon = BitmapFactory.decodeResource(context.getResources(), R.drawable.epitrochoid);
+        return Bitmap.createScaledBitmap(originalRibbon, (int) (originalRibbon.getWidth() * scalingRatio), (int) (originalRibbon.getHeight() * scalingRatio), true);
     }
 
     // Builds the rotor
@@ -77,7 +84,8 @@ public class DementiaDrawer {
     void drawOnCanvas(Canvas canvas, Calendar calendar, boolean ambientMode) {
         canvas.drawRect(0, 0, width, height, backgroundPaint);
         // Draw the stator and other static elements
-        canvas.drawBitmap(this.backgroundImage, centerX - backgroundImage.getWidth() / 2, centerY - backgroundImage.getHeight() / 2, backgroundPaint);
+        canvas.drawBitmap(ribbonImage, centerX - ribbonImage.getWidth() / 2, centerY - ribbonImage.getHeight() / 2, backgroundPaint);
+        canvas.drawBitmap(backgroundImage, centerX - backgroundImage.getWidth() / 2, centerY - backgroundImage.getHeight() / 2, backgroundPaint);
         canvas.save();
 
         float statorTheta = (calendar.get(Calendar.SECOND) + calendar.get(Calendar.MILLISECOND) / 1000) / 60f * 360;
