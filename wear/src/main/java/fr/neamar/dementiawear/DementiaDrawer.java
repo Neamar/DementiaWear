@@ -15,9 +15,11 @@ public class DementiaDrawer {
     private final static String TAG = "DementiaDrawer";
 
     private final Bitmap backgroundImage;
+    private final Bitmap rotorImage;
+    private final Bitmap handImage;
+
     private final Paint backgroundPaint;
 
-    private final Bitmap rotorImage;
 
     private final int width;
     private final int height;
@@ -33,6 +35,8 @@ public class DementiaDrawer {
         this.backgroundImage = getBackgroundImage(context, width, height);
         backgroundPaint = new Paint();
         backgroundPaint.setColor(Color.BLACK);
+        backgroundPaint.setAntiAlias(true);
+        backgroundPaint.setFilterBitmap(true);
 
         scalingRatio = width * DementiaSettings.STATOR_RATIO_IN_WATCH / DementiaSettings.STATOR_SIZE;
         Log.i(TAG, "Scaling ratio is " + scalingRatio);
@@ -42,7 +46,8 @@ public class DementiaDrawer {
         rotorCircularPitch = 2 * DementiaSettings.ROTOR_CIRCULAR_PITCH * scalingRatio;
         combinedCircularPitch = statorCircularPitch + rotorCircularPitch + DementiaSettings.TEETH_SIZE;
 
-        this.rotorImage = getRotorImage(context, width, height);
+        this.rotorImage = getRotorImage(context);
+        this.handImage = getHandImage(context);
 
         this.width = width;
         this.height = height;
@@ -57,10 +62,17 @@ public class DementiaDrawer {
     }
 
     // Builds the rotor
-    private Bitmap getRotorImage(Context context, int width, int height) {
+    private Bitmap getRotorImage(Context context) {
         Bitmap originalRotor = BitmapFactory.decodeResource(context.getResources(), R.drawable.rotor);
-        return Bitmap.createScaledBitmap(originalRotor, (int) (backgroundImage.getWidth() / DementiaSettings.n), (int) (backgroundImage.getHeight() / DementiaSettings.n), true);
+        return Bitmap.createScaledBitmap(originalRotor, (int) (originalRotor.getWidth() * scalingRatio), (int) (originalRotor.getHeight() * scalingRatio), true);
     }
+
+    // Builds the hand
+    private Bitmap getHandImage(Context context) {
+        Bitmap originalHand = BitmapFactory.decodeResource(context.getResources(), R.drawable.hand);
+        return Bitmap.createScaledBitmap(originalHand, (int) (originalHand.getWidth() * scalingRatio), (int) (originalHand.getHeight() * scalingRatio), true);
+    }
+
 
     void drawOnCanvas(Canvas canvas, Calendar calendar, boolean ambientMode) {
         canvas.drawRect(0, 0, width, height, backgroundPaint);
@@ -69,22 +81,31 @@ public class DementiaDrawer {
         canvas.save();
 
         float statorTheta = (calendar.get(Calendar.SECOND) + calendar.get(Calendar.MILLISECOND) / 1000) / 60f * 360;
+        Log.e(TAG, "Angle " + statorTheta);
 
-        // Transform the angle to be used with cos and sin. Make sure that 0 is at the top, as is standard in a watch.
-        float statorThetaRadians = (float) Math.toRadians(statorTheta - 90);
+        canvas.rotate(statorTheta, centerX, centerY);
+
+        // Transform the rotor
         float rotorTheta = statorTheta * DementiaSettings.n + (360 / DementiaSettings.t / 2);
-
         Matrix statorMatrix = new Matrix();
 
-        Log.e(TAG, "Angle " + statorTheta + " rad " + Math.toRadians(statorTheta));
-        // Start centered
         float dx = centerX - rotorImage.getWidth() / 2;
         float dy = centerY - combinedCircularPitch - rotorImage.getHeight() / 2;
         statorMatrix.setTranslate(dx, dy);
         statorMatrix.postRotate(rotorTheta, dx + rotorImage.getWidth() / 2, dy + rotorImage.getHeight() / 2);
 
-        canvas.rotate(statorTheta, centerX, centerY);
-        canvas.drawBitmap(this.rotorImage, statorMatrix, backgroundPaint);
+        canvas.drawBitmap(rotorImage, statorMatrix, backgroundPaint);
+
+        // Transform the hand
+        float handTheta = statorTheta * DementiaSettings.n;
+        Matrix handMatrix = new Matrix();
+
+        dx = centerX - handImage.getWidth() / 2;
+        dy = centerY - combinedCircularPitch - DementiaSettings.HAND_Y_CENTER * scalingRatio;
+        handMatrix.setTranslate(dx, dy);
+        handMatrix.postRotate(handTheta, dx + handImage.getWidth() / 2, dy + DementiaSettings.HAND_Y_CENTER * scalingRatio);
+
+        canvas.drawBitmap(handImage, handMatrix, backgroundPaint);
 
         canvas.restore();
     }
