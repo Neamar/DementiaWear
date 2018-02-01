@@ -7,10 +7,13 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.util.Log;
 
 import java.util.Calendar;
 
 public class DementiaDrawer {
+    private final static String TAG = "DementiaDrawer";
+
     private final Bitmap backgroundImage;
     private final Paint backgroundPaint;
 
@@ -21,10 +24,23 @@ public class DementiaDrawer {
     private final float centerX;
     private final float centerY;
 
-    public DementiaDrawer(Context context, int width, int height) {
+    private final float scalingRatio;
+    private final float statorCircularPitch;
+    private final float rotorCircularPitch;
+    private final float combinedCircularPitch;
+
+    DementiaDrawer(Context context, int width, int height) {
         this.backgroundImage = getBackgroundImage(context, width, height);
         backgroundPaint = new Paint();
         backgroundPaint.setColor(Color.BLACK);
+
+        scalingRatio = width * DementiaSettings.STATOR_RATIO_IN_WATCH / DementiaSettings.STATOR_SIZE;
+        Log.i(TAG, "Scaling ratio is " + scalingRatio);
+
+        // TODO: Why do I need a factor 2?
+        statorCircularPitch = 2 * DementiaSettings.STATOR_CIRCULAR_PITCH * scalingRatio;
+        rotorCircularPitch = 2 * DementiaSettings.ROTOR_CIRCULAR_PITCH * scalingRatio;
+        combinedCircularPitch = statorCircularPitch + rotorCircularPitch + DementiaSettings.TEETH_SIZE;
 
         this.rotorImage = getRotorImage(context, width, height);
 
@@ -46,14 +62,31 @@ public class DementiaDrawer {
         return Bitmap.createScaledBitmap(originalRotor, (int) (backgroundImage.getWidth() / DementiaSettings.n), (int) (backgroundImage.getHeight() / DementiaSettings.n), true);
     }
 
-    public void drawOnCanvas(Canvas canvas, Calendar calendar, boolean ambientMode) {
+    void drawOnCanvas(Canvas canvas, Calendar calendar, boolean ambientMode) {
+        canvas.drawRect(0, 0, width, height, backgroundPaint);
         // Draw the stator and other static elements
         canvas.drawBitmap(this.backgroundImage, centerX - backgroundImage.getWidth() / 2, centerY - backgroundImage.getHeight() / 2, backgroundPaint);
 
-        float angle = 90; //(float) (calendar.get(Calendar.SECOND) / 60f * 360);
+        float statorTheta = (float) (calendar.get(Calendar.SECOND) / 60f * 360);
+
+        // Transform the angle to be used with cos and sin. Make sure that 0 is at the top, as is standard in a watch.
+        float statorThetaRadians = (float) Math.toRadians(statorTheta - 90);
+        float rotorTheta = statorTheta * DementiaSettings.n;
+
         Matrix statorMatrix = new Matrix();
-        statorMatrix.setRotate(angle, rotorImage.getWidth() / 2, rotorImage.getHeight() / 2);
-        statorMatrix.postTranslate(centerX - rotorImage.getWidth() / 2, centerY - rotorImage.getHeight() / 2);
+
+        Log.e(TAG, "Angle " + statorTheta + " rad " + Math.toRadians(statorTheta));
+        // Start centered
+        float dx = centerX;
+        dx += combinedCircularPitch * Math.cos(statorThetaRadians);
+        dx -= rotorImage.getWidth() / 2;
+
+        float dy = centerY;
+        dy += combinedCircularPitch * Math.sin(statorThetaRadians);
+        dy -= rotorImage.getHeight() / 2;
+
+        statorMatrix.setTranslate(dx, dy);
+        //statorMatrix.postRotate(rotorTheta, centerX, centerY);
         canvas.drawBitmap(this.rotorImage, statorMatrix, backgroundPaint);
     }
 }
